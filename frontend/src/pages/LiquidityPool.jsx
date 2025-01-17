@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { ArrowDownUp, Plus, Minus } from 'lucide-react';
 import { ethers } from 'ethers';
 import { abi } from '../scdata/abi.json';
-import depadd from '../scdata/deployed_address.json'
-const deployedAddress =depadd.LiquidityModuleLiquidityPool;
+import depadd from '../scdata/deployed_address.json';
+
+const deployedAddress = depadd.LiquidityModuleLiquidityPool;
 
 const tokens = {
-  TK1: "0x50E00bC33d107108D935B07EF7D82594651B1968", 
-  TK2: "0x3070ef83F647838DB86f276c7D9E58B83559a788",
+  TKA: "0x50E00bC33d107108D935B07EF7D82594651B1968", 
+  TKB: "0x3070ef83F647838DB86f276c7D9E58B83559a788",
 };
 
 const LiquidityPool = () => {
@@ -16,11 +17,11 @@ const LiquidityPool = () => {
   const [activeTab, setActiveTab] = useState('swap');
   const [swapAmount, setSwapAmount] = useState('');
   const [swapDirection, setSwapDirection] = useState(true);
-  const [token1Amount, setToken1Amount] = useState('');
-  const [token2Amount, setToken2Amount] = useState('');
+  const [tokenAAmount, setTokenAAmount] = useState('');
+  const [tokenBAmount, setTokenBAmount] = useState('');
   const [removeAmount, setRemoveAmount] = useState('');
-  const [token1Balance, setToken1Balance] = useState('0.0');
-  const [token2Balance, setToken2Balance] = useState('0.0');
+  const [tokenABalance, setTokenABalance] = useState('0.0');
+  const [tokenBBalance, setTokenBBalance] = useState('0.0');
   const [poolShare, setPoolShare] = useState('0.0');
   const [signer, setSigner] = useState(null);
   const [account, setAccount] = useState('');
@@ -33,9 +34,9 @@ const LiquidityPool = () => {
     try {
       setError('');
       
-      const [reserve1, reserve2] = await contract.getReserves();
-      setToken1Balance(ethers.formatEther(reserve1));
-      setToken2Balance(ethers.formatEther(reserve2));
+      const [reserveA, reserveB] = await contract.getReserves();
+      setTokenABalance(ethers.formatEther(reserveA));
+      setTokenBBalance(ethers.formatEther(reserveB));
 
       const totalShares = await contract.totalShares();
       const userShares = await contract.shares(account);
@@ -85,7 +86,7 @@ const LiquidityPool = () => {
       setError('');
       
       const tokenContract = new ethers.Contract(
-        swapDirection ? tokens.TK1 : tokens.TK2,
+        swapDirection ? tokens.TKA : tokens.TKB,
         ['function approve(address spender, uint256 amount) public returns (bool)'],
         signer
       );
@@ -107,38 +108,38 @@ const LiquidityPool = () => {
   };
 
   const handleAddLiquidity = async () => {
-    if (!contract || !token1Amount || !token2Amount) return;
+    if (!contract || !tokenAAmount || !tokenBAmount) return;
     
     try {
       setLoading(true);
       setError('');
       
-      const amount1 = ethers.parseEther(token1Amount);
-      const amount2 = ethers.parseEther(token2Amount);
+      const amountA = ethers.parseEther(tokenAAmount);
+      const amountB = ethers.parseEther(tokenBAmount);
 
-      const token1Contract = new ethers.Contract(
-        tokens.TK1,
+      const tokenAContract = new ethers.Contract(
+        tokens.TKA,
         ['function approve(address spender, uint256 amount) public returns (bool)'],
         signer
       );
-      const token2Contract = new ethers.Contract(
-        tokens.TK2,
+      const tokenBContract = new ethers.Contract(
+        tokens.TKB,
         ['function approve(address spender, uint256 amount) public returns (bool)'],
         signer
       );
       
-      const approve1Tx = await token1Contract.approve(deployedAddress, amount1);
+      const approve1Tx = await tokenAContract.approve(deployedAddress, amountA);
       await approve1Tx.wait();
       
-      const approve2Tx = await token2Contract.approve(deployedAddress, amount2);
+      const approve2Tx = await tokenBContract.approve(deployedAddress, amountB);
       await approve2Tx.wait();
       
-      const tx = await contract.addLiquidity(amount1, amount2);
+      const tx = await contract.addLiquidity(amountA, amountB);
       await tx.wait();
       
       await updateBalances();
-      setToken1Amount('');
-      setToken2Amount('');
+      setTokenAAmount('');
+      setTokenBAmount('');
     } catch (error) {
       console.error("Adding liquidity failed:", error);
       setError(error.message || 'Failed to add liquidity. Please try again.');
@@ -232,23 +233,23 @@ const LiquidityPool = () => {
             <input
               type="number"
               className="w-full p-4 bg-gray-100 rounded-lg text-gray-800"
-              placeholder="Token 1 Amount"
-              value={token1Amount}
-              onChange={(e) => setToken1Amount(e.target.value)}
+              placeholder="Token A Amount"
+              value={tokenAAmount}
+              onChange={(e) => setTokenAAmount(e.target.value)}
               disabled={loading}
             />
             <input
               type="number"
               className="w-full p-4 bg-gray-100 rounded-lg text-gray-800"
-              placeholder="Token 2 Amount"
-              value={token2Amount}
-              onChange={(e) => setToken2Amount(e.target.value)}
+              placeholder="Token B Amount"
+              value={tokenBAmount}
+              onChange={(e) => setTokenBAmount(e.target.value)}
               disabled={loading}
             />
             <button
               onClick={handleAddLiquidity}
               className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold"
-              disabled={loading || !token1Amount || !token2Amount}
+              disabled={loading || !tokenAAmount || !tokenBAmount}
             >
               {loading ? 'Processing...' : 'Add Liquidity'}
             </button>
